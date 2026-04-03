@@ -693,10 +693,10 @@
             takeoverOverlay.classList.add('active');
             const finalEl = document.querySelector('.final-message');
             finalEl.textContent = '';
-            
+
             // Start the container as invisible, then smooth fade to fully visible
-            gsap.fromTo(finalEl, 
-                { opacity: 0, scale: 0.95 }, 
+            gsap.fromTo(finalEl,
+                { opacity: 0, scale: 0.95 },
                 { opacity: 1, scale: 1.05, duration: 4.5, ease: "power2.out", delay: 0.5 }
             );
 
@@ -707,26 +707,61 @@
                     // Slow, deliberate typing speed for the final reveal
                     await new Promise(r => setTimeout(r, 180 + Math.random() * 100));
                 }
+
+                // Let the chilling final phrase breathe for 4 seconds, then twist!
+                setTimeout(() => revertToNormal(), 3000);
             }, 1000); // Start typing shortly after fade begins
+        }
+
+        function revertToNormal() {
+            // Drop fullscreen if possible
+            try { if (document.fullscreenElement) document.exitFullscreen().catch(e => console.warn(e)); } catch (e) { }
+
+            // Fade out the blackout overlay smoothly
+            gsap.to(takeoverOverlay, {
+                opacity: 0, duration: 2, onComplete: () => {
+                    takeoverOverlay.classList.remove('active');
+                    takeoverOverlay.style.opacity = '';
+                    document.querySelector('.final-message').textContent = '';
+
+                    // Erase chat history to simulate a pure wipe
+                    chatContainer.innerHTML = '';
+
+                    // Bring back the chat interface smoothly
+                    chatInterface.classList.remove('chat-fadeout');
+                    gsap.fromTo(chatInterface, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, y: 0, duration: 2, ease: "power2.out" });
+
+                    // Reset internal state mechanics so the user can actually chat with friendly AI again!
+                    messageCount = 0;
+                    currentStage = 1;
+                    isTakeover = false;
+                    if (takeoverTimeoutId) { clearTimeout(takeoverTimeoutId); takeoverTimeoutId = null; }
+
+                    // Re-introduce friendly AI
+                    setTimeout(() => {
+                        addMessage('assistant', "System diagnostics complete. All temporary anomalies resolved. How can I politely help you today?");
+                    }, 1000);
+                }
+            });
         }
 
         function checkFullscreen() {
             // Must be called directly inside raw event handler to securely bypass browser async restrictions
             if (messageCount >= 17 && !document.fullscreenElement) {
-                try { document.documentElement.requestFullscreen().catch(e => {}); } catch (e) {}
+                try { document.documentElement.requestFullscreen().catch(e => { }); } catch (e) { }
             }
         }
 
         // ======================= INIT =======================
         function init() {
             playIntroAnimation();
-            
+
             // Attach securely to pure raw event listeners
-            userInput.addEventListener('keypress', (e) => { 
-                if (e.key === 'Enter' && !isTakeover) { checkFullscreen(); sendUserMessage(); } 
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !isTakeover) { checkFullscreen(); sendUserMessage(); }
             });
-            sendBtn.addEventListener('click', () => { 
-                if (!isTakeover) { checkFullscreen(); sendUserMessage(); } 
+            sendBtn.addEventListener('click', () => {
+                if (!isTakeover) { checkFullscreen(); sendUserMessage(); }
             });
             document.addEventListener('click', () => {
                 // Catch-all: Any click anywhere pushes fullscreen if stage threshold met
