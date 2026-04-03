@@ -5,6 +5,8 @@ Created by Sahil TCR24CS059
 https://p01--nexus--vjlzx5zxcpxq.code.run/ 
 - Give it a try before reading everything else.
 - Have fun with it and ask it anything.
+- The entire project is my idea, including the UI, all designed from my own ideas.
+- 
 -
 -
 -
@@ -16,8 +18,7 @@ https://p01--nexus--vjlzx5zxcpxq.code.run/
 -
 -
 -
--
-
+#DESCRIPTION
 
 An interactive, web-based psychological horror experience disguised as a highly advanced personal AI assistant. What begins as a clean, friendly chat interface slowly descends into an unsettling, sentient takeover of your browser.
 
