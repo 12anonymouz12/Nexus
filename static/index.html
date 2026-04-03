@@ -318,6 +318,56 @@
             pointer-events: none;
             transition: opacity 3.5s ease, transform 3.5s ease !important;
         }
+
+        /* ---------- MOBILE RESPONSIVENESS ---------- */
+        @media screen and (max-width: 768px) {
+            .intro-text {
+                font-size: 1.5rem;
+                letter-spacing: 2px;
+            }
+
+            .intro-sub {
+                font-size: 0.9rem;
+                padding: 0 20px;
+                text-align: center;
+            }
+
+            .chat-interface {
+                bottom: 10px;
+                width: 96vw;
+            }
+
+            .messages-area {
+                height: 60vh;
+                padding: 14px;
+            }
+
+            .message {
+                max-width: 95%;
+                font-size: 0.82rem;
+            }
+
+            .input-area {
+                padding: 12px 14px;
+            }
+
+            .terminal-window {
+                width: 320px;
+                max-width: 90vw;
+                height: 250px;
+            }
+
+            .terminal-close {
+                height: 35px;
+                width: 50px;
+                font-size: 1.2rem;
+            }
+
+            .final-message {
+                font-size: 2.2rem;
+                letter-spacing: 6px;
+            }
+        }
     </style>
 </head>
 
