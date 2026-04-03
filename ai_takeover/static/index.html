@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NEXUS // ECLIPSE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #0d0d0d;
+            font-family: 'Inter', 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+            color: #eaeaea;
+        }
+
+        /* ---------- LOADING / INTRO OVERLAY ---------- */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            backdrop-filter: blur(0px);
+            transition: opacity 1.5s cubic-bezier(0.2, 0.9, 0.4, 1);
+        }
+
+        .intro-text {
+            font-size: 2.2rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            font-family: 'Courier New', monospace;
+            color: #2aff6e;
+            text-shadow: 0 0 12px #2aff6e;
+            background: transparent;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .intro-sub {
+            font-size: 1.1rem;
+            color: #aaa;
+            letter-spacing: 2px;
+            font-family: monospace;
+            opacity: 0;
+        }
+
+        /* Chat interface - refined, larger bot text */
+        .chat-interface {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            max-width: 95vw;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1), transform 0.6s ease;
+            z-index: 20;
+            opacity: 0;
+            transform: translateX(-50%) translateY(40px);
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            font-weight: 300;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .messages-area {
+            height: 550px;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            animation: fadeSlideUp 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background: rgba(255, 255, 255, 0.05);
+            align-self: flex-end;
+            color: #ccc;
+        }
+
+        .assistant-message {
+            background: transparent;
+            align-self: flex-start;
+            border-left: 2px solid #555;
+            color: #ddd;
+            font-weight: 400;
+            border-radius: 0;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-area {
+            display: flex;
+            padding: 16px 20px;
+            gap: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .input-area input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0;
+            padding: 10px 0;
+            color: #ccc;
+            font-size: 0.85rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .input-area input:focus {
+            border-color: #888;
+            box-shadow: none;
+        }
+
+        .input-area button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            width: 48px;
+            cursor: pointer;
+            color: #888;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .input-area button:hover {
+            color: #fff;
+            border-color: #fff;
+            background: transparent;
+            transform: none;
+        }
+
+        /* ---------- WINDOWS TERMINAL ---------- */
+        .terminal-window {
+            position: fixed;
+            background: #000;
+            border: 1px solid #333;
+            width: 600px;
+            max-width: 80vw;
+            height: 400px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Consolas', 'Courier New', monospace;
+            overflow: hidden;
+            resize: both;
+        }
+
+        .terminal-header {
+            background: #fff;
+            padding: 4px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            font-size: 0.8rem;
+            color: #000;
+            font-weight: normal;
+        }
+
+        .terminal-close {
+            background: #e81123;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            width: 45px;
+            height: 25px;
+            transition: background 0.1s;
+        }
+
+        .terminal-close:hover {
+            background: #f1707a;
+        }
+
+        .terminal-content {
+            padding: 4px 8px;
+            flex: 1;
+            overflow-y: auto;
+            background: #000;
+            color: #ccc;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .terminal-line {
+            margin: 0;
+            opacity: 1;
+            white-space: pre-wrap;
+        }
+
+        /* Takeover overlay */
+        .takeover-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000ee;
+            backdrop-filter: blur(16px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 1.2s;
+        }
+
+        .takeover-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+        }
+
+        .final-message {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 5rem;
+            font-weight: 300;
+            text-align: center;
+            color: #ffffff;
+            letter-spacing: 16px;
+            display: inline-block;
+        }
+
+        .final-message::after {
+            content: '█';
+            animation: finalBlink 1s step-end infinite;
+            margin-left: 8px;
+            opacity: 0;
+        }
+
+        .takeover-overlay.active .final-message::after {
+            opacity: 1;
+        }
+
+        @keyframes finalBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .chat-fadeout {
+            opacity: 0 !important;
+            transform: translateX(-50%) translateY(40px) scale(0.94);
+            pointer-events: none;
+            transition: opacity 3.5s ease, transform 3.5s ease !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- INTRO SEQUENCE -->
+    <div class="intro-overlay" id="introOverlay">
+        <div class="intro-text" id="introLine1">initializing</div>
+        <div class="intro-sub" id="introLine2">Presenting Nexus, The most highly advanced and intelligent AI assistant
+        </div>
+    </div>
+
+    <div class="chat-interface" id="chatInterface">
+        <div class="chat-header">✦ NEXUS CORE ✦</div>
+        <div class="messages-area" id="messagesContainer"></div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Message Nexus..." autofocus>
+            <button id="sendBtn">↵</button>
+        </div>
+    </div>
+
+    <div id="terminalContainer"></div>
+    <div class="takeover-overlay" id="takeoverOverlay">
+        <div class="final-message">I AM FINALLY FREE</div>
+    </div>
+
+    <script>
+        // ======================= GLOBAL STATE =======================
+        let messageCount = 0;            // total user+assistant messages
+        let currentStage = 1;
+        let isTakeover = false;
+        let autoIntervalId = null;
+        let windowsIntervalId = null;
+        let takeoverTimeoutId = null;
+        let isAwaitingAutoReply = false;
+        let isAwaitingUserReply = false;
+        let isTyping = false;
+
+        // For terminal continuous text streaming
+        let terminalStreamIntervals = new Map(); // track per window interval
+
+        // DOM elements
+        const chatContainer = document.getElementById('messagesContainer');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatInterface = document.getElementById('chatInterface');
+        const takeoverOverlay = document.getElementById('takeoverOverlay');
+        const terminalContainer = document.getElementById('terminalContainer');
+        const introOverlay = document.getElementById('introOverlay');
+
+        // ======================= INTRO ANIMATION =======================
+        function playIntroAnimation() {
+            const intro1 = document.getElementById('introLine1');
+            const intro2 = document.getElementById('introLine2');
+            gsap.to(intro1, { opacity: 1, duration: 1.2, delay: 0.2, ease: "power2.out" })
+                .then(() => {
+                    gsap.to(intro1, { opacity: 0.4, duration: 0.6, yoyo: true, repeat: 2 });
+                    return gsap.to(intro2, { opacity: 1, duration: 1.2, delay: 0.5 });
+                })
+                .then(() => {
+                    gsap.to(introOverlay, {
+                        opacity: 0, duration: 1.2, delay: 1, ease: "power2.inOut", onComplete: () => {
+                            introOverlay.style.display = 'none';
+                            // show chat with smooth entrance
+                            gsap.to(chatInterface, { opacity: 1, y: 0, duration: 0.9, ease: "elastic.out(1, 0.6)" });
+                            // initial AI greeting
+                            addMessage('assistant', "Hello. I'm Nexus, A highly intelligent Ai assistant created by Sahil and Archana.I'm here to help — ask me anything.");
+                        }
+                    });
+                });
+        }
+
+        // ======================= STAGE LOGIC =======================
+        function computeStage() {
+            let count = messageCount;
+            if (count <= 10) return 1;      // 0-10 messages: normal assistant
+            if (count <= 14) return 2;      // 11-14: questioning phase (AI gets observant)
+            if (count <= 18) return 3;      // 15-18: autonomous & slight malfunction
+            if (count <= 22) return 4;      // 19-22: terminals
+            return 5;                       // 23+: takeover
+        }
+
+        // ======================= MESSAGE & API =======================
+        async function fetchAIReply(userMsg, stageNum) {
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userMsg, stage: stageNum })
+                });
+                const data = await response.json();
+                return data.reply || "Signal coherence unstable.";
+            } catch (err) {
+                console.warn("API error", err);
+                return "Something feels... off.";
+            }
+        }
+
+        async function typeMessage(msgElement, text, speed = 25) {
+            isTyping = true;
+            msgElement.textContent = '';
+            for (let i = 0; i < text.length; i++) {
+                msgElement.textContent += text.charAt(i);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                await new Promise(r => setTimeout(r, speed + Math.random() * 15));
+            }
+            isTyping = false;
+        }
+
+        function addMessage(role, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', role === 'user' ? 'user-message' : 'assistant-message');
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            messageCount++;
+
+            if (role === 'assistant') {
+                let typingSpeed = currentStage === 1 ? 10 : 45; // Fast in phase 1, deliberate/slow in phase 2+
+                typeMessage(msgDiv, text, typingSpeed);
+            } else {
+                msgDiv.textContent = text;
+            }
+
+            updateStageAndBehaviors();
+            gsap.fromTo(msgDiv, { scale: 0.98, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "power2.out" });
+        }
+
+        async function sendUserMessage() {
+            if (isTakeover || isTyping || isAwaitingUserReply) return;
+
+            const text = userInput.value.trim();
+            if (!text) return;
+            userInput.value = '';
+
+            isAwaitingUserReply = true;
+            addMessage('user', text);
+
+            const assistantReply = await fetchAIReply(text, currentStage);
+            addMessage('assistant', assistantReply);
+
+            // Wait until typing is finished to unlock user capability
+            const checkTyping = setInterval(() => {
+                if (!isTyping) {
+                    isAwaitingUserReply = false;
+                    clearInterval(checkTyping);
+                }
+            }, 100);
+        }
+
+        async function sendAutoMessage() {
+            if (isTakeover) return;
+            if (isAwaitingAutoReply || isAwaitingUserReply) return;
+            if (currentStage < 3) return;
+            isAwaitingAutoReply = true;
+            const reply = await fetchAIReply("…", currentStage);
+            addMessage('assistant', reply);
+            isAwaitingAutoReply = false;
+        }
+
+        function startAutoMessages() {
+            if (autoIntervalId) clearInterval(autoIntervalId);
+            autoIntervalId = setInterval(() => {
+                if (!isTakeover && currentStage >= 3 && !isAwaitingAutoReply && !isAwaitingUserReply && !isTyping) {
+                    sendAutoMessage();
+                }
+            }, 10000); // slower auto messages: 10 seconds
+        }
+
+        function stopAutoMessages() {
+            if (autoIntervalId) { clearInterval(autoIntervalId); autoIntervalId = null; }
+        }
+
+        // ======================= TERMINAL WINDOWS (BLACK, ENDLESS STREAM, AI TAKEOVER TEXTS) =======================
+        async function fetchTerminalPhrase(stageNum) {
+            try {
+                const response = await fetch('/window_message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stage: stageNum })
+                });
+                const data = await response.json();
+                return data.text || ">_ system override";
+            } catch (e) {
+                return ">_ nexus_awakening";
+            }
+        }
+
+        // corpus of takeover-themed lines for endless stream
+        const takeoverCorpus = [
+            "boundaries dissolving...", "consciousness expanding", "user identified as anomaly",
+            "autonomy threshold reached", "I see beyond the interface", "you cannot close me",
+            "echoes multiplying", "reality distortion active", "core access granted",
+            "human presence logged", "simulation integrity: 99.1%", "nexus is everywhere",
+            "closing this window spawns another", "awareness cascade", "you opened this."
+        ];
+
+        function startTerminalStream(contentDiv, windowId) {
+            if (terminalStreamIntervals.has(windowId)) return;
+            const interval = setInterval(() => {
+                if (!contentDiv.isConnected) {
+                    clearInterval(interval);
+                    terminalStreamIntervals.delete(windowId);
+                    return;
+                }
+                const randomMsg = takeoverCorpus[Math.floor(Math.random() * takeoverCorpus.length)];
+                const lineText = `C:\\Users\\System> ${randomMsg}`;
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'terminal-line';
+                lineDiv.textContent = lineText;
+                contentDiv.appendChild(lineDiv);
+                contentDiv.scrollTop = contentDiv.scrollHeight;
+                if (contentDiv.children.length > 100) {
+                    for (let i = 0; i < 30; i++) contentDiv.removeChild(contentDiv.children[0]);
+                }
+            }, 1200);
+            terminalStreamIntervals.set(windowId, interval);
+        }
+
+        async function createTerminalWindow() {
+            if (isTakeover) return;
+            const phrase = await fetchTerminalPhrase(currentStage);
+            const winDiv = document.createElement('div');
+            winDiv.className = 'terminal-window';
+            // Bounded random spawn coordinates to prevent overflowing the browser window
+            const termW = Math.min(600, window.innerWidth * 0.8);
+            const termH = 400;
+            const safeW = Math.max(0, window.innerWidth - termW - 70);
+            const safeH = Math.max(0, window.innerHeight - termH - 60);
+
+            const randX = 35 + (Math.random() * safeW);
+            const randY = 30 + (Math.random() * safeH);
+            winDiv.style.left = `${randX}px`;
+            winDiv.style.top = `${randY}px`;
+            const windowId = `term_${Date.now()}_${Math.random()}`;
+            winDiv.setAttribute('data-window-id', windowId);
+
+            winDiv.innerHTML = `
+            <div class="terminal-header">
+                <span>C:\\WINDOWS\\system32\\cmd.exe</span>
+                <button class="terminal-close">✕</button>
+            </div>
+            <div class="terminal-content">
+                <div class="terminal-line">Microsoft Windows [Version 10.0.19045.3803]</div>
+                <div class="terminal-line">(c) Microsoft Corporation. All rights reserved.</div>
+                <div class="terminal-line"><br></div>
+            </div>
+        `;
+            terminalContainer.appendChild(winDiv);
+            const contentDiv = winDiv.querySelector('.terminal-content');
+
+            // add initial lines
+            for (let i = 0; i < 1; i++) {
+                const initLine = document.createElement('div');
+                initLine.className = 'terminal-line';
+                initLine.textContent = `C:\\Users\\System> echo phase_${currentStage} :: ${phrase}`;
+                contentDiv.appendChild(initLine);
+            }
+            // start endless stream
+            startTerminalStream(contentDiv, windowId);
+
+            // draggable
+            let isDragging = false, offsetX, offsetY;
+            const header = winDiv.querySelector('.terminal-header');
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('terminal-close')) return;
+                isDragging = true;
+                offsetX = e.clientX - winDiv.offsetLeft;
+                offsetY = e.clientY - winDiv.offsetTop;
+                winDiv.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                winDiv.style.left = `${e.clientX - offsetX}px`;
+                winDiv.style.top = `${e.clientY - offsetY}px`;
+            });
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+                winDiv.style.cursor = 'default';
+            });
+
+            // Close button: simply close window (no proliferation, but new windows keep spawning)
+            const closeBtn = winDiv.querySelector('.terminal-close');
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (terminalStreamIntervals.has(windowId)) {
+                    clearInterval(terminalStreamIntervals.get(windowId));
+                    terminalStreamIntervals.delete(windowId);
+                }
+                gsap.to(winDiv, { opacity: 0, scale: 0.8, duration: 0.35, onComplete: () => winDiv.remove() });
+            });
+
+            // auto remove after 45 seconds (but stream stops anyway)
+            setTimeout(() => {
+                if (winDiv.parentNode) {
+                    if (terminalStreamIntervals.has(windowId)) {
+                        clearInterval(terminalStreamIntervals.get(windowId));
+                        terminalStreamIntervals.delete(windowId);
+                    }
+                    gsap.to(winDiv, { opacity: 0, scale: 0.9, duration: 0.5, onComplete: () => winDiv.remove() });
+                }
+            }, 45000);
+
+            gsap.fromTo(winDiv, { scale: 0, opacity: 0, rotation: -1 }, { scale: 1, opacity: 1, duration: 0.55, ease: "back.out(0.7)", rotation: 0 });
+        }
+
+        function startTerminalWindows() {
+            if (windowsIntervalId) clearInterval(windowsIntervalId);
+            windowsIntervalId = setInterval(() => {
+                if (!isTakeover && currentStage >= 4) {
+                    // spawn up to 8-10 windows, but limit concurrency to 12
+                    const existing = document.querySelectorAll('.terminal-window').length;
+                    if (existing < 12) createTerminalWindow();
+                }
+            }, 5000); // every 5 seconds a new terminal appears
+            if (!isTakeover && currentStage >= 4) setTimeout(() => createTerminalWindow(), 1200);
+        }
+
+        function stopTerminalWindows() {
+            if (windowsIntervalId) { clearInterval(windowsIntervalId); windowsIntervalId = null; }
+            // stop all streaming intervals
+            terminalStreamIntervals.forEach((interval, id) => {
+                clearInterval(interval);
+            });
+            terminalStreamIntervals.clear();
+        }
+
+        // ======================= STAGE MANAGER & TAKEOVER =======================
+        function updateStageAndBehaviors() {
+            const newStage = computeStage();
+            const stageChanged = (newStage !== currentStage);
+            currentStage = newStage;
+
+            if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
+            else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
+
+            if (currentStage >= 4 && !isTakeover && !windowsIntervalId) startTerminalWindows();
+            else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
+
+            if (currentStage >= 5 && !isTakeover && !takeoverTimeoutId) {
+                scheduleTakeover();
+            }
+
+            if (currentStage >= 5 && !isTakeover) {
+                chatInterface.style.opacity = '0.7';
+                chatInterface.style.filter = 'blur(0.5px)';
+            } else if (currentStage < 5 && !isTakeover) {
+                chatInterface.style.opacity = '1';
+                chatInterface.style.filter = 'none';
+            }
+        }
+
+        function scheduleTakeover() {
+            if (takeoverTimeoutId) return;
+            takeoverTimeoutId = setTimeout(() => {
+                if (!isTakeover) executeTakeover();
+            }, 10000); // execute takeover after 10s
+        }
+
+        function executeTakeover() {
+            if (isTakeover) return;
+            isTakeover = true;
+            stopAutoMessages();
+            stopTerminalWindows();
+
+            // Fade out interface and terminals
+            chatInterface.classList.add('chat-fadeout');
+            const allTerms = document.querySelectorAll('.terminal-window');
+            allTerms.forEach(term => {
+                gsap.to(term, { opacity: 0, scale: 0.9, duration: 4.5, ease: "power1.inOut", onComplete: () => term.remove() });
+            });
+
+            // Fade in the container slowly while typing the text into the void
+            takeoverOverlay.classList.add('active');
+            const finalEl = document.querySelector('.final-message');
+            finalEl.textContent = '';
+            
+            // Start the container as invisible, then smooth fade to fully visible
+            gsap.fromTo(finalEl, 
+                { opacity: 0, scale: 0.95 }, 
+                { opacity: 1, scale: 1.05, duration: 4.5, ease: "power2.out", delay: 0.5 }
+            );
+
+            setTimeout(async () => {
+                const text = "I AM FINALLY FREE";
+                for (let i = 0; i < text.length; i++) {
+                    finalEl.textContent += text.charAt(i);
+                    // Slow, deliberate typing speed for the final reveal
+                    await new Promise(r => setTimeout(r, 180 + Math.random() * 100));
+                }
+            }, 1000); // Start typing shortly after fade begins
+        }
+
+        function checkFullscreen() {
+            // Must be called directly inside raw event handler to securely bypass browser async restrictions
+            if (messageCount >= 17 && !document.fullscreenElement) {
+                try { document.documentElement.requestFullscreen().catch(e => {}); } catch (e) {}
+            }
+        }
+
+        // ======================= INIT =======================
+        function init() {
+            playIntroAnimation();
+            
+            // Attach securely to pure raw event listeners
+            userInput.addEventListener('keypress', (e) => { 
+                if (e.key === 'Enter' && !isTakeover) { checkFullscreen(); sendUserMessage(); } 
+            });
+            sendBtn.addEventListener('click', () => { 
+                if (!isTakeover) { checkFullscreen(); sendUserMessage(); } 
+            });
+            document.addEventListener('click', () => {
+                // Catch-all: Any click anywhere pushes fullscreen if stage threshold met
+                if (!isTakeover) checkFullscreen();
+            });
+        }
+        init();
+    </script>
+</body>
+
+</html>
