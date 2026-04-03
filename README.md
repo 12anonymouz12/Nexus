@@ -1,7 +1,23 @@
-# NEXUS // ECLIPSE (AI Takeover Experience)
+# NEXUS // ECLIPSE (AI ASSISTANT)
 ---
 Created by Sahil TCR24CS059
 ---
+https://p01--nexus--vjlzx5zxcpxq.code.run/ 
+- Give it a try before reading everything else.
+- Have fun with it and ask it anything.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 An interactive, web-based psychological horror experience disguised as a highly advanced personal AI assistant. What begins as a clean, friendly chat interface slowly descends into an unsettling, sentient takeover of your browser.
 
