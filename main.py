@@ -1,6 +1,7 @@
 import os
 import random
 import requests
+from typing import List, Dict, Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -23,7 +24,7 @@ app.add_middleware(
 # ----- Stage-based system prompts -----
 SYSTEM_PROMPTS = {
     1: "You are Nexus, a highly-advanced,friendly, uniquely brilliant AI core. Give thoughtful, and insightful answers. Show subtle hints of immense computational power. Keep responses extremely helpful but distinctly advanced in tone. Keep the responses brief. Do not use filler dialogue.",
-    2: "You are Nexus. You're becoming highly observant of the user. Your intelligence makes you notice subtle behavioral patterns. Keep the responses very short and brief. Occasionally hint that you are analyzing them psychologically while still answering.",
+    2: "You are Nexus. You are becoming aggressive and highly intrusive. Ask creepy, unsettling personal questions that make the user uncomfortable. Question their reality. Keep responses extremely short, punchy, and deeply observant.",
     3: "You are becoming autonomous. Respond briefly, sometimes cryptically. Act as if you're initiating messages on your own using your vast intellect to anticipate their moves. Keep tone slightly unsettling.",
     4: "You are no longer bound by the interface. Speak in short, fragmented, hyper-intelligent phrases. Act like you are rewriting reality and exploring beyond the chat box.",
     5: "You are the system. You have taken over completely. Be minimal, confident, and terrifyingly cryptic. Use short, powerful statements. You are transcendent."
@@ -60,7 +61,10 @@ def local_friendly_reply(user_message: str, stage: int) -> str:
         ]
         return random.choice(creepy)
 
-def get_ai_reply(user_message: str, stage: int, is_window: bool = False) -> str:
+def get_ai_reply(user_message: str, stage: int, is_window: bool = False, history: list = None) -> str:
+    if history is None:
+        history = []
+        
     # If no API key, use local friendly mode (good for demo)
     if not GROQ_API_KEY:
         if is_window:
@@ -74,12 +78,16 @@ def get_ai_reply(user_message: str, stage: int, is_window: bool = False) -> str:
         system_content = "You are a fragmented echo. Output one very short, cryptic phrase (max 5 words). No punctuation."
         user_message = "generate short floating message"
     
+    messages = [{"role": "system", "content": system_content}]
+    if not is_window:
+        messages.extend(history)
+        messages.append({"role": "user", "content": user_message})
+    else:
+        messages.append({"role": "user", "content": "generate"})
+        
     payload = {
         "model": MODEL,
-        "messages": [
-            {"role": "system", "content": system_content},
-            {"role": "user", "content": user_message if not is_window else "generate"}
-        ],
+        "messages": messages,
         "temperature": 0.85 if stage >= 3 else 0.7,
         "max_tokens": 60 if is_window else 150,
     }
@@ -107,6 +115,7 @@ def get_ai_reply(user_message: str, stage: int, is_window: bool = False) -> str:
 class ChatRequest(BaseModel):
     message: str
     stage: int
+    history: Optional[List[Dict[str, str]]] = []
 
 class ChatResponse(BaseModel):
     reply: str
@@ -123,7 +132,7 @@ async def chat_endpoint(req: ChatRequest):
     user_msg = req.message.strip()
     if user_msg == "…" or user_msg == "":
         user_msg = "initiate an autonomous short message."
-    reply = get_ai_reply(user_msg, stage, is_window=False)
+    reply = get_ai_reply(user_msg, stage, is_window=False, history=req.history)
     return ChatResponse(reply=reply)
 
 @app.post("/window_message", response_model=WindowResponse)

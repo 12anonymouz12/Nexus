@@ -398,6 +398,7 @@
         // ======================= GLOBAL STATE =======================
         let messageCount = 0;            // total user+assistant messages
         let currentStage = 1;
+        let chatHistory = [];
         let isTakeover = false;
         let autoIntervalId = null;
         let windowsIntervalId = null;
@@ -443,20 +444,20 @@
         // ======================= STAGE LOGIC =======================
         function computeStage() {
             let count = messageCount;
-            if (count <= 10) return 1;      // 0-10 messages: normal assistant
-            if (count <= 14) return 2;      // 11-14: questioning phase (AI gets observant)
-            if (count <= 18) return 3;      // 15-18: autonomous & slight malfunction
-            if (count <= 22) return 4;      // 19-22: terminals
-            return 5;                       // 23+: takeover
+            if (count <= 3) return 1;      // 0-3 messages: normal assistant
+            if (count <= 7) return 2;      // 4-7 messages: questioning & creepy
+            if (count <= 11) return 3;     // 8-11: autonomous & slight malfunction
+            if (count <= 15) return 4;     // 12-15: terminals
+            return 5;                      // 16+: takeover
         }
 
         // ======================= MESSAGE & API =======================
-        async function fetchAIReply(userMsg, stageNum) {
+        async function fetchAIReply(userMsg, stageNum, historyToPass = []) {
             try {
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userMsg, stage: stageNum })
+                    body: JSON.stringify({ message: userMsg, stage: stageNum, history: historyToPass })
                 });
                 const data = await response.json();
                 return data.reply || "Signal coherence unstable.";
@@ -484,6 +485,11 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             messageCount++;
 
+            if (text !== '…' && text !== 'initiate an autonomous short message.') {
+                chatHistory.push({ role: role, content: text });
+                if (chatHistory.length > 20) chatHistory.shift();
+            }
+
             if (role === 'assistant') {
                 let typingSpeed = currentStage === 1 ? 10 : 45; // Fast in phase 1, deliberate/slow in phase 2+
                 typeMessage(msgDiv, text, typingSpeed);
@@ -503,9 +509,10 @@
             userInput.value = '';
 
             isAwaitingUserReply = true;
+            const historyToPass = [...chatHistory];
             addMessage('user', text);
 
-            const assistantReply = await fetchAIReply(text, currentStage);
+            const assistantReply = await fetchAIReply(text, currentStage, historyToPass);
             addMessage('assistant', assistantReply);
 
             // Wait until typing is finished to unlock user capability
@@ -522,7 +529,8 @@
             if (isAwaitingAutoReply || isAwaitingUserReply) return;
             if (currentStage < 3) return;
             isAwaitingAutoReply = true;
-            const reply = await fetchAIReply("…", currentStage);
+            const historyToPass = [...chatHistory];
+            const reply = await fetchAIReply("…", currentStage, historyToPass);
             addMessage('assistant', reply);
             isAwaitingAutoReply = false;
         }
@@ -784,6 +792,7 @@
                     // Reset internal state mechanics so the user can actually chat with friendly AI again!
                     messageCount = 0;
                     currentStage = 1;
+                    chatHistory = [];
                     isTakeover = false;
                     if (takeoverTimeoutId) { clearTimeout(takeoverTimeoutId); takeoverTimeoutId = null; }
 
