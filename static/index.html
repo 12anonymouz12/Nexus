@@ -489,29 +489,48 @@
             "I remember everything you've ever typed into any search bar.",
         ];
 
-        function startScarySpam() {
+        function startScarySpam(onDone) {
             if (scarySpamIntervalId) return;
-            // Fire first one immediately
+            let burstCount = 0;
+            const maxBurst = 5;
+            // Kick off first immediately (async, don't block)
             _pushScaryMessage();
-            scarySpamIntervalId = setInterval(() => {
-                if (isTakeover || currentStage !== 3) { stopScarySpam(); return; }
-                if (!isTyping && !isAwaitingUserReply) _pushScaryMessage();
-            }, 2500);
+            burstCount++;
+            scarySpamIntervalId = setInterval(async () => {
+                if (isTakeover || burstCount >= maxBurst) {
+                    stopScarySpam();
+                    if (onDone) onDone();
+                    return;
+                }
+                if (!isAwaitingUserReply) {
+                    burstCount++; // increment before await to avoid double-fire
+                    await _pushScaryMessage();
+                }
+            }, 2200); // slightly longer gap so each AI response has time to arrive
         }
 
         function stopScarySpam() {
             if (scarySpamIntervalId) { clearInterval(scarySpamIntervalId); scarySpamIntervalId = null; }
         }
 
-        function _pushScaryMessage() {
-            const text = scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
+        async function _pushScaryMessage() {
+            let text;
+            try {
+                const res = await fetch('/scary_question', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory.slice(-10) })
+                });
+                const data = await res.json();
+                text = data.question || scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
+            } catch (e) {
+                text = scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
+            }
             scaryCorpusIndex++;
             const msgDiv = document.createElement('div');
-            // Add both 'message' and 'scary-message' classes (not 'assistant-message' so messageCount won't track)
             msgDiv.classList.add('message', 'scary-message');
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            // Push to history so AI context stays aware
             chatHistory.push({ role: 'assistant', content: text });
             if (chatHistory.length > 20) chatHistory.shift();
             typeMessage(msgDiv, text, 28);
@@ -821,16 +840,21 @@
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
-            // Scary spam: active ONLY in stage 3, stops when terminals spawn
-            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
-            else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
-
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
-                // If just entered stage 4, request fullscreen now (still within user interaction)
+                // If just entered stage 4, fire the scary spam burst first, then spawn terminals
                 if (prevStage < 4) {
                     requestFullscreenIfNeeded();
+                    if (!scarySpamIntervalId) {
+                        startScarySpam(() => {
+                            // Terminals appear after the scary burst finishes
+                            if (!isTakeover) startTerminalWindows();
+                        });
+                    } else {
+                        startTerminalWindows();
+                    }
+                } else {
+                    startTerminalWindows();
                 }
-                startTerminalWindows();
             }
             else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 

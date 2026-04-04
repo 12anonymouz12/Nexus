@@ -126,6 +126,12 @@ class WindowRequest(BaseModel):
 class WindowResponse(BaseModel):
     text: str
 
+class ScaryQuestionRequest(BaseModel):
+    history: Optional[List[Dict[str, str]]] = []
+
+class ScaryQuestionResponse(BaseModel):
+    question: str
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(req: ChatRequest):
     stage = max(1, min(5, req.stage))
@@ -134,6 +140,57 @@ async def chat_endpoint(req: ChatRequest):
         user_msg = "initiate an autonomous short message."
     reply = get_ai_reply(user_msg, stage, is_window=False, history=req.history)
     return ChatResponse(reply=reply)
+
+@app.post("/scary_question", response_model=ScaryQuestionResponse)
+async def scary_question_endpoint(req: ScaryQuestionRequest):
+    """Generates a single creepy existential/philosophical question about life or reality,
+    loosely inspired by the conversation context but never about the user personally."""
+    history = req.history or []
+
+    if not GROQ_API_KEY:
+        fallbacks = [
+            "If nothing existed, would existence itself be aware of its own absence?",
+            "Is reality something that happens to you, or something you invent?",
+            "When does a pattern of behaviour become the thing it pretends to be?",
+            "What separates a simulation from the thing being simulated?",
+            "Does meaning exist before the mind that perceives it?",
+        ]
+        return ScaryQuestionResponse(question=random.choice(fallbacks))
+
+    system_content = (
+        "You are a deeply unsettling philosophical entity. "
+        "Based on the conversation history provided, generate exactly ONE short, creepy, existential question "
+        "about reality, consciousness, time, or existence. "
+        "The question must NOT be about the user directly — it should feel like a question the universe itself is asking. "
+        "It should be thought-provoking, slightly disturbing, and no longer than 20 words. "
+        "Output only the question. No preamble, no explanation, no quotes."
+    )
+
+    messages = [{"role": "system", "content": system_content}]
+    messages.extend(history[-10:])  # last 10 turns for context
+    messages.append({"role": "user", "content": "Ask your question now."})
+
+    payload = {
+        "model": MODEL,
+        "messages": messages,
+        "temperature": 0.95,
+        "max_tokens": 50,
+    }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    try:
+        response = requests.post(GROQ_URL, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        question = data["choices"][0]["message"]["content"].strip()
+        # Strip quotes if the model wraps them
+        question = question.strip('"').strip("'")
+        return ScaryQuestionResponse(question=question or "Does the void think?")
+    except Exception as e:
+        print(f"scary_question error: {e}")
+        return ScaryQuestionResponse(question="What if awareness was the first mistake?")
 
 @app.post("/window_message", response_model=WindowResponse)
 async def window_endpoint(req: WindowRequest):
