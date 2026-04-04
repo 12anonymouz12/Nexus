@@ -535,6 +535,7 @@
         let scarySpamIntervalId = null;
         let scaryCorpusIndex = 0;
         let terminalCount = 0; // count of terminals spawned since takeover attempt started or since refresh
+        let pendingFullscreen = false; // Flag to request fullscreen on next interaction if blocked
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -917,12 +918,22 @@
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
             // Scary spam: active ONLY in stage 3, stops when terminals spawn
-            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
+            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) {
+                startScarySpam();
+                // Phase 4 (Terminals) triggers automatically 3 seconds after spam starts
+                setTimeout(() => {
+                    if (currentStage === 3 && !isTakeover) {
+                        messageCount = 14; 
+                        updateStageAndBehaviors();
+                    }
+                }, 3000);
+            }
             else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
 
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
-                // If just entered stage 4, request fullscreen now (still within user interaction)
+                // If just entered stage 4, request fullscreen now
                 if (prevStage < 4) {
+                    pendingFullscreen = true;
                     requestFullscreenIfNeeded();
                 }
                 startTerminalWindows();
@@ -1062,6 +1073,14 @@
                     sendUserMessage();
                 }
             });
+
+            // Fallback for fullscreen if automatic request was blocked
+            document.addEventListener('click', () => {
+                if (pendingFullscreen && currentStage >= 4) {
+                    requestFullscreenIfNeeded();
+                    pendingFullscreen = false;
+                }
+            }, { capture: true });
         }
         init();
     </script>
