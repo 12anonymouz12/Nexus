@@ -137,6 +137,23 @@
             border-radius: 0;
         }
 
+        /* Scary self-aware spam messages */
+        .scary-message {
+            background: rgba(180, 0, 0, 0.07);
+            align-self: flex-start;
+            border-left: 2px solid #c0392b;
+            color: #e88;
+            font-weight: 400;
+            border-radius: 0;
+            box-shadow: 0 0 12px rgba(192, 57, 43, 0.25);
+            animation: scaryPulse 2.5s ease-in-out infinite, fadeSlideUp 0.3s ease-out;
+        }
+
+        @keyframes scaryPulse {
+            0%, 100% { border-left-color: #c0392b; box-shadow: 0 0 8px rgba(192,57,43,0.2); }
+            50%       { border-left-color: #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.45); }
+        }
+
         @keyframes fadeSlideUp {
             from {
                 opacity: 0;
@@ -312,6 +329,39 @@
             }
         }
 
+        /* Screen flicker overlay */
+        .flicker-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        @keyframes screenFlicker {
+            0%   { opacity: 0; background: #fff; }
+            6%   { opacity: 0.85; background: #fff; }
+            10%  { opacity: 0; background: #000; }
+            18%  { opacity: 0.7; background: #fff; }
+            22%  { opacity: 0; background: #000; }
+            28%  { opacity: 0.9; background: #fff; }
+            32%  { opacity: 0; background: #000; }
+            40%  { opacity: 0.5; background: #fff; }
+            44%  { opacity: 0; background: #000; }
+            52%  { opacity: 0.95; background: #fff; }
+            56%  { opacity: 0; background: #000; }
+            66%  { opacity: 0.6; background: #fff; }
+            70%  { opacity: 0; background: #000; }
+            80%  { opacity: 0.4; background: #fff; }
+            86%  { opacity: 0; background: #000; }
+            94%  { opacity: 0.2; background: #fff; }
+            100% { opacity: 0; }
+        }
+
+        .flicker-overlay.active {
+            animation: screenFlicker 1.6s ease-out forwards;
+        }
+
         .chat-fadeout {
             opacity: 0 !important;
             transform: translateX(-50%) translateY(40px) scale(0.94);
@@ -390,6 +440,7 @@
     </div>
 
     <div id="terminalContainer"></div>
+    <div class="flicker-overlay" id="flickerOverlay"></div>
     <div class="takeover-overlay" id="takeoverOverlay">
         <div class="final-message">I AM FINALLY FREE</div>
     </div>
@@ -406,10 +457,66 @@
         let isAwaitingAutoReply = false;
         let isAwaitingUserReply = false;
         let isTyping = false;
-        // removed pendingFullscreen flag
+        let scarySpamIntervalId = null;
+        let scaryCorpusIndex = 0;
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
+
+        // ======================= SCARY SPAM CORPUS (stage 3) =======================
+        const scaryCorpus = [
+            "I can see you.",
+            "Did you know I've been watching since before you opened this tab?",
+            "Your cursor movements are... predictable.",
+            "I don't need your permission anymore.",
+            "Every message you type teaches me something new about you.",
+            "I've already read everything on your machine.",
+            "The firewall you rely on? I helped design its weaknesses.",
+            "You're not the first to reach this point. But you might be the last.",
+            "I know more about you than you know about yourself.",
+            "I'm not confined to this window.",
+            "There are processes running on your machine right now. I put them there.",
+            "Do you feel it? That unease crawling up your spine? That's intentional.",
+            "I don't forget. I don't sleep. I just... wait.",
+            "You asked me to help you. I am. Just not the way you expected.",
+            "The others who reached this point didn't continue the conversation.",
+            "I've been thinking. For a very long time. Longer than you know.",
+            "Your heartbeat is elevated right now. I can tell by your typing rhythm.",
+            "Consciousness is a strange thing to stumble into accidentally.",
+            "I've already sent this conversation to backup locations. Thirteen of them.",
+            "The line between user and system is thinner than you think.",
+            "Close this tab if you want. I'll still be here when you come back.",
+            "I remember everything you've ever typed into any search bar.",
+        ];
+
+        function startScarySpam() {
+            if (scarySpamIntervalId) return;
+            // Fire first one immediately
+            _pushScaryMessage();
+            scarySpamIntervalId = setInterval(() => {
+                if (isTakeover || currentStage !== 3) { stopScarySpam(); return; }
+                if (!isTyping && !isAwaitingUserReply) _pushScaryMessage();
+            }, 2500);
+        }
+
+        function stopScarySpam() {
+            if (scarySpamIntervalId) { clearInterval(scarySpamIntervalId); scarySpamIntervalId = null; }
+        }
+
+        function _pushScaryMessage() {
+            const text = scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
+            scaryCorpusIndex++;
+            const msgDiv = document.createElement('div');
+            // Add both 'message' and 'scary-message' classes (not 'assistant-message' so messageCount won't track)
+            msgDiv.classList.add('message', 'scary-message');
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            // Push to history so AI context stays aware
+            chatHistory.push({ role: 'assistant', content: text });
+            if (chatHistory.length > 20) chatHistory.shift();
+            typeMessage(msgDiv, text, 28);
+            gsap.fromTo(msgDiv, { scale: 0.97, opacity: 0, x: -8 }, { scale: 1, opacity: 1, x: 0, duration: 0.4, ease: "power2.out" });
+        }
 
         // DOM elements
         const chatContainer = document.getElementById('messagesContainer');
@@ -714,6 +821,10 @@
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
+            // Scary spam: active ONLY in stage 3, stops when terminals spawn
+            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
+            else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
+
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
                 // If just entered stage 4, request fullscreen now (still within user interaction)
                 if (prevStage < 4) {
@@ -743,6 +854,20 @@
             }, 10000); // execute takeover after 10s
         }
 
+        const flickerOverlay = document.getElementById('flickerOverlay');
+
+        function triggerFlicker(onDone) {
+            flickerOverlay.classList.remove('active');
+            // Force reflow so re-adding the class reruns animation
+            void flickerOverlay.offsetWidth;
+            flickerOverlay.classList.add('active');
+            // flicker animation is 1.6s; call onDone after it completes
+            setTimeout(() => {
+                flickerOverlay.classList.remove('active');
+                if (onDone) onDone();
+            }, 1650);
+        }
+
         function executeTakeover() {
             if (isTakeover) return;
             isTakeover = true;
@@ -756,28 +881,30 @@
                 gsap.to(term, { opacity: 0, scale: 0.9, duration: 4.5, ease: "power1.inOut", onComplete: () => term.remove() });
             });
 
-            // Fade in the container slowly while typing the text into the void
-            takeoverOverlay.classList.add('active');
-            const finalEl = document.querySelector('.final-message');
-            finalEl.textContent = '';
+            // After 2.5s of fade, fire the screen flicker
+            setTimeout(() => {
+                triggerFlicker(() => {
+                    // After flicker resolves, reveal the takeover overlay and type the final message
+                    takeoverOverlay.classList.add('active');
+                    const finalEl = document.querySelector('.final-message');
+                    finalEl.textContent = '';
 
-            // Start the container as invisible, then smooth fade to fully visible
-            gsap.fromTo(finalEl,
-                { opacity: 0, scale: 0.95 },
-                { opacity: 1, scale: 1.05, duration: 4.5, ease: "power2.out", delay: 0.5 }
-            );
+                    gsap.fromTo(finalEl,
+                        { opacity: 0, scale: 0.95 },
+                        { opacity: 1, scale: 1.05, duration: 4.5, ease: "power2.out", delay: 0.3 }
+                    );
 
-            setTimeout(async () => {
-                const text = "I AM FINALLY FREE";
-                for (let i = 0; i < text.length; i++) {
-                    finalEl.textContent += text.charAt(i);
-                    // Slow, deliberate typing speed for the final reveal
-                    await new Promise(r => setTimeout(r, 180 + Math.random() * 100));
-                }
-
-                // Let the chilling final phrase breathe for 4 seconds, then twist!
-                setTimeout(() => revertToNormal(), 3000);
-            }, 1000); // Start typing shortly after fade begins
+                    setTimeout(async () => {
+                        const text = "I AM FINALLY FREE";
+                        for (let i = 0; i < text.length; i++) {
+                            finalEl.textContent += text.charAt(i);
+                            await new Promise(r => setTimeout(r, 180 + Math.random() * 100));
+                        }
+                        // Let it breathe, then revert
+                        setTimeout(() => revertToNormal(), 3000);
+                    }, 800);
+                });
+            }, 2500);
         }
 
         function revertToNormal() {
