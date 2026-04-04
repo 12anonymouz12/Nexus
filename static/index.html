@@ -150,45 +150,17 @@
         }
 
         @keyframes scaryPulse {
-            0%, 100% { border-left-color: #c0392b; box-shadow: 0 0 8px rgba(192,57,43,0.2); }
-            50%       { border-left-color: #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.45); }
-        }
 
-        /* Malfunction state on the chat interface */
-        .chat-interface.malfunction {
-            border: 1px solid rgba(255, 30, 30, 0.7) !important;
-            box-shadow: 0 0 35px rgba(255, 0, 0, 0.45), 0 0 80px rgba(255, 0, 0, 0.15) !important;
-            background: rgba(35, 0, 0, 0.92) !important;
-            animation: malfunctionShake 0.09s steps(2) infinite;
-        }
+            0%,
+            100% {
+                border-left-color: #c0392b;
+                box-shadow: 0 0 8px rgba(192, 57, 43, 0.2);
+            }
 
-        @keyframes malfunctionShake {
-            0%   { transform: translateX(-50%) translateY(0px); }
-            25%  { transform: translateX(calc(-50% + 3px)) translateY(-1px); }
-            75%  { transform: translateX(calc(-50% - 3px)) translateY(1px); }
-            100% { transform: translateX(-50%) translateY(0px); }
-        }
-
-        /* Rapid takeover glitch messages */
-        .glitch-message {
-            background: rgba(200, 0, 0, 0.18);
-            align-self: flex-start;
-            border-left: 3px solid #ff2222;
-            color: #ff4444;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            border-radius: 0;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-size: 0.88rem;
-            box-shadow: 0 0 18px rgba(255, 0, 0, 0.4);
-            animation: glitchFlicker 0.18s step-end infinite, fadeSlideUp 0.15s ease-out;
-        }
-
-        @keyframes glitchFlicker {
-            0%, 100% { opacity: 1; }
-            45%      { opacity: 0.75; }
-            55%      { opacity: 0.95; }
+            50% {
+                border-left-color: #ff4444;
+                box-shadow: 0 0 20px rgba(255, 68, 68, 0.45);
+            }
         }
 
         @keyframes fadeSlideUp {
@@ -376,23 +348,89 @@
         }
 
         @keyframes screenFlicker {
-            0%   { opacity: 0; background: #fff; }
-            6%   { opacity: 0.85; background: #fff; }
-            10%  { opacity: 0; background: #000; }
-            18%  { opacity: 0.7; background: #fff; }
-            22%  { opacity: 0; background: #000; }
-            28%  { opacity: 0.9; background: #fff; }
-            32%  { opacity: 0; background: #000; }
-            40%  { opacity: 0.5; background: #fff; }
-            44%  { opacity: 0; background: #000; }
-            52%  { opacity: 0.95; background: #fff; }
-            56%  { opacity: 0; background: #000; }
-            66%  { opacity: 0.6; background: #fff; }
-            70%  { opacity: 0; background: #000; }
-            80%  { opacity: 0.4; background: #fff; }
-            86%  { opacity: 0; background: #000; }
-            94%  { opacity: 0.2; background: #fff; }
-            100% { opacity: 0; }
+            0% {
+                opacity: 0;
+                background: #fff;
+            }
+
+            6% {
+                opacity: 0.85;
+                background: #fff;
+            }
+
+            10% {
+                opacity: 0;
+                background: #000;
+            }
+
+            18% {
+                opacity: 0.7;
+                background: #fff;
+            }
+
+            22% {
+                opacity: 0;
+                background: #000;
+            }
+
+            28% {
+                opacity: 0.9;
+                background: #fff;
+            }
+
+            32% {
+                opacity: 0;
+                background: #000;
+            }
+
+            40% {
+                opacity: 0.5;
+                background: #fff;
+            }
+
+            44% {
+                opacity: 0;
+                background: #000;
+            }
+
+            52% {
+                opacity: 0.95;
+                background: #fff;
+            }
+
+            56% {
+                opacity: 0;
+                background: #000;
+            }
+
+            66% {
+                opacity: 0.6;
+                background: #fff;
+            }
+
+            70% {
+                opacity: 0;
+                background: #000;
+            }
+
+            80% {
+                opacity: 0.4;
+                background: #fff;
+            }
+
+            86% {
+                opacity: 0;
+                background: #000;
+            }
+
+            94% {
+                opacity: 0.2;
+                background: #fff;
+            }
+
+            100% {
+                opacity: 0;
+            }
         }
 
         .flicker-overlay.active {
@@ -526,48 +564,29 @@
             "I remember everything you've ever typed into any search bar.",
         ];
 
-        function startScarySpam(onDone) {
+        function startScarySpam() {
             if (scarySpamIntervalId) return;
-            let burstCount = 0;
-            const maxBurst = 5;
-            // Kick off first immediately (async, don't block)
+            // Fire first one immediately
             _pushScaryMessage();
-            burstCount++;
-            scarySpamIntervalId = setInterval(async () => {
-                if (isTakeover || burstCount >= maxBurst) {
-                    stopScarySpam();
-                    if (onDone) onDone();
-                    return;
-                }
-                if (!isAwaitingUserReply) {
-                    burstCount++; // increment before await to avoid double-fire
-                    await _pushScaryMessage();
-                }
-            }, 2200); // slightly longer gap so each AI response has time to arrive
+            scarySpamIntervalId = setInterval(() => {
+                if (isTakeover || currentStage !== 3) { stopScarySpam(); return; }
+                if (!isTyping && !isAwaitingUserReply) _pushScaryMessage();
+            }, 2500);
         }
 
         function stopScarySpam() {
             if (scarySpamIntervalId) { clearInterval(scarySpamIntervalId); scarySpamIntervalId = null; }
         }
 
-        async function _pushScaryMessage() {
-            let text;
-            try {
-                const res = await fetch('/scary_question', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: chatHistory.slice(-10) })
-                });
-                const data = await res.json();
-                text = data.question || scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
-            } catch (e) {
-                text = scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
-            }
+        function _pushScaryMessage() {
+            const text = scaryCorpus[scaryCorpusIndex % scaryCorpus.length];
             scaryCorpusIndex++;
             const msgDiv = document.createElement('div');
+            // Add both 'message' and 'scary-message' classes (not 'assistant-message' so messageCount won't track)
             msgDiv.classList.add('message', 'scary-message');
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            // Push to history so AI context stays aware
             chatHistory.push({ role: 'assistant', content: text });
             if (chatHistory.length > 20) chatHistory.shift();
             typeMessage(msgDiv, text, 28);
@@ -611,7 +630,7 @@
             let count = messageCount;
             if (count <= 3) return 1;      // 0-3 messages: normal assistant
             if (count <= 6) return 2;      // 4-7 messages: questioning & creepy
-            if (count <= 10) return 3;     // 8-11: autonomous & slight malfunction
+            if (count <= 8) return 3;     // 8-11: autonomous & slight malfunction
             if (count <= 13) return 4;     // 12-15: terminals
             return 5;                      // 16+: takeover
         }
@@ -877,23 +896,16 @@
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
+            // Scary spam: active ONLY in stage 3, stops when terminals spawn
+            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
+            else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
+
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
-                // If just entered stage 4, fire the scary spam burst first, then spawn terminals
+                // If just entered stage 4, request fullscreen now (still within user interaction)
                 if (prevStage < 4) {
                     requestFullscreenIfNeeded();
-                    if (!scarySpamIntervalId) {
-                        startScarySpam(() => {
-                            // Malfunction burst → then terminals spawn
-                            if (!isTakeover) triggerMalfunction(() => {
-                                if (!isTakeover) startTerminalWindows();
-                            });
-                        });
-                    } else {
-                        startTerminalWindows();
-                    }
-                } else {
-                    startTerminalWindows();
                 }
+                startTerminalWindows();
             }
             else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 
