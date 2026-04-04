@@ -535,7 +535,6 @@
         let scarySpamIntervalId = null;
         let scaryCorpusIndex = 0;
         let terminalCount = 0; // count of terminals spawned since takeover attempt started or since refresh
-        let pendingFullscreen = false; // Flag to request fullscreen on next interaction if blocked
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -633,7 +632,7 @@
             if (count <= 3) return 1;      // 0-3 messages: normal assistant
             if (count <= 6) return 2;      // 4-7 messages: questioning & creepy
             if (count <= 8) return 3;     // 8-11: autonomous & slight malfunction
-            if (count <= 14) return 4;     // 12-15: terminals
+            if (count <= 13) return 4;     // 12-15: terminals
             return 5;                      // 16+: takeover
         }
 
@@ -918,22 +917,12 @@
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
             // Scary spam: active ONLY in stage 3, stops when terminals spawn
-            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) {
-                startScarySpam();
-                // Phase 4 (Terminals) triggers automatically 3 seconds after spam starts
-                setTimeout(() => {
-                    if (currentStage === 3 && !isTakeover) {
-                        messageCount = 14;
-                        updateStageAndBehaviors();
-                    }
-                }, 5000);
-            }
+            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
             else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
 
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
-                // If just entered stage 4, request fullscreen now
+                // If just entered stage 4, request fullscreen now (still within user interaction)
                 if (prevStage < 4) {
-                    pendingFullscreen = true;
                     requestFullscreenIfNeeded();
                 }
                 startTerminalWindows();
@@ -957,7 +946,7 @@
             if (takeoverTimeoutId) return;
             takeoverTimeoutId = setTimeout(() => {
                 if (!isTakeover) executeTakeover();
-            }, 12000); // execute takeover after 10s
+            }, 10000); // execute takeover after 10s
         }
 
         const flickerOverlay = document.getElementById('flickerOverlay');
@@ -1073,14 +1062,6 @@
                     sendUserMessage();
                 }
             });
-
-            // Fallback for fullscreen if automatic request was blocked
-            document.addEventListener('click', () => {
-                if (pendingFullscreen && currentStage >= 4) {
-                    requestFullscreenIfNeeded();
-                    pendingFullscreen = false;
-                }
-            }, { capture: true });
         }
         init();
     </script>
