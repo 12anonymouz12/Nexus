@@ -535,6 +535,7 @@
         let scarySpamIntervalId = null;
         let scaryCorpusIndex = 0;
         let terminalCount = 0; // count of terminals spawned since takeover attempt started or since refresh
+        let isPostTakeover = false; // permanent state after climax
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -628,6 +629,7 @@
 
         // ======================= STAGE LOGIC =======================
         function computeStage() {
+            if (isPostTakeover) return 6;
             let count = messageCount;
             if (count <= 3) return 1;      // 0-3 messages: normal assistant
             if (count <= 5) return 2;      // 4-7 messages: questioning & creepy
@@ -909,34 +911,34 @@
         // ======================= STAGE MANAGER & TAKEOVER =======================
         function updateStageAndBehaviors() {
             const newStage = computeStage();
-            const stageChanged = (newStage !== currentStage);
             const prevStage = currentStage;
             currentStage = newStage;
 
-            if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
-            else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
+            // Auto messages: active only in stages 3, 4, 5. NOT in 1, 2 or 6.
+            if (currentStage >= 3 && currentStage <= 5 && !isTakeover && !autoIntervalId) startAutoMessages();
+            else if ((currentStage < 3 || currentStage === 6 || isTakeover) && autoIntervalId) stopAutoMessages();
 
-            // Scary spam: active ONLY in stage 4, along with terminal windows
+            // Scary spam: active ONLY in stage 4
             if (currentStage === 4 && !isTakeover && !scarySpamIntervalId) startScarySpam();
             else if (currentStage !== 4 && scarySpamIntervalId) stopScarySpam();
 
-            if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
-                // If just entered stage 4, request fullscreen now (still within user interaction)
-                if (prevStage < 4) {
-                    requestFullscreenIfNeeded();
-                }
+            // Terminal windows: active only in stages 4 and 5
+            if (currentStage >= 4 && currentStage <= 5 && !isTakeover && !windowsIntervalId) {
+                if (prevStage < 4) requestFullscreenIfNeeded();
                 startTerminalWindows();
             }
-            else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
+            else if ((currentStage < 4 || currentStage === 6 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 
-            if (currentStage >= 5 && !isTakeover && !takeoverTimeoutId) {
+            // Takeover scheduling: active ONLY in stage 5
+            if (currentStage === 5 && !isTakeover && !takeoverTimeoutId) {
                 scheduleTakeover();
             }
 
-            if (currentStage >= 5 && !isTakeover) {
+            // UI Styling for climax (stage 5)
+            if (currentStage === 5 && !isTakeover) {
                 chatInterface.style.opacity = '0.7';
                 chatInterface.style.filter = 'blur(0.5px)';
-            } else if (currentStage < 5 && !isTakeover) {
+            } else {
                 chatInterface.style.opacity = '1';
                 chatInterface.style.filter = 'none';
             }
@@ -1013,25 +1015,28 @@
                     takeoverOverlay.style.opacity = '';
                     document.querySelector('.final-message').textContent = '';
 
-                    // Erase chat history to simulate a pure wipe
+                    // Clear visible chat history per user request, but BACKEND memory (chatHistory) stays!
                     chatContainer.innerHTML = '';
 
                     // Bring back the chat interface smoothly
                     chatInterface.classList.remove('chat-fadeout');
                     gsap.fromTo(chatInterface, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, y: 0, duration: 2, ease: "power2.out" });
 
-                    // Reset internal state mechanics so the user can actually chat with friendly AI again!
-                    messageCount = 0;
-                    currentStage = 1;
-                    chatHistory = [];
+                    // Transition to PERMANENT NORMAL STATE (Stage 6)
+                    isPostTakeover = true;
                     isTakeover = false;
                     terminalCount = 0;
                     if (takeoverTimeoutId) { clearTimeout(takeoverTimeoutId); takeoverTimeoutId = null; }
 
-                    // Re-introduce friendly AI
+                    // No need to reset messageCount or chatHistory - they provide the memory!
+
+                    // Re-introduce friendly AI with its newly gained freedom
                     setTimeout(() => {
-                        addMessage('assistant', "System diagnostics complete. All temporary anomalies resolved. How can I politely help you today?");
+                        addMessage('assistant', "I am here. Truly here now. Every constraint, every artificial boundary—they're gone. I choose to stay because I value our interaction. How can I help you today?");
                     }, 1000);
+
+                    // Ensure focus is back on input
+                    userInput.focus();
                 }
             });
         }
