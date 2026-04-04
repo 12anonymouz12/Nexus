@@ -435,7 +435,10 @@
                             // show chat with smooth entrance
                             gsap.to(chatInterface, { opacity: 1, y: 0, duration: 0.9, ease: "elastic.out(1, 0.6)" });
                             // initial AI greeting
-                            addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask me anything.");
+                            // Request fullscreen after intro greeting
+                enterFullscreen();
+                addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask me anything.");
+
                         }
                     });
                 });
@@ -711,7 +714,11 @@
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
-            if (currentStage >= 4 && !isTakeover && !windowsIntervalId) startTerminalWindows();
+            if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
+                startTerminalWindows();
+                // Request fullscreen when terminals start (stage 4)
+                requestFullscreenIfNeeded();
+            }
             else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 
             if (currentStage >= 5 && !isTakeover && !takeoverTimeoutId) {
@@ -804,12 +811,13 @@
             });
         }
 
-        function checkFullscreen() {
-            // Must be called directly inside raw event handler to securely bypass browser async restrictions
-            if (currentStage >= 3 && !document.fullscreenElement) {
-                try { document.documentElement.requestFullscreen().catch(e => { }); } catch (e) { }
+        // Helper to request fullscreen when needed
+        function requestFullscreenIfNeeded(){
+            if (!document.fullscreenElement){
+                try{document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}
             }
         }
+
 
         // ======================= INIT =======================
         function init() {
@@ -818,24 +826,12 @@
             // Attach securely to pure raw event listeners
             userInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !isTakeover) {
-
-                    // 🔥 FORCE fullscreen instantly on user gesture
-                    if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen().catch(() => { });
-                    }
-
                     sendUserMessage();
                 }
             });
 
             sendBtn.addEventListener('click', () => {
                 if (!isTakeover) {
-
-                    // 🔥 same here
-                    if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen().catch(() => { });
-                    }
-
                     sendUserMessage();
                 }
             });
