@@ -406,6 +406,8 @@
         let isAwaitingAutoReply = false;
         let isAwaitingUserReply = false;
         let isTyping = false;
+        // New flag for pending fullscreen request when terminals start
+        let pendingFullscreen = false;
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -435,9 +437,7 @@
                             // show chat with smooth entrance
                             gsap.to(chatInterface, { opacity: 1, y: 0, duration: 0.9, ease: "elastic.out(1, 0.6)" });
                             // initial AI greeting
-                            // Request fullscreen after intro greeting
-                            enterFullscreen();
-                            addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask me anything.");
+                            addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask anything.");
 
                         }
                     });
@@ -716,8 +716,8 @@
 
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
                 startTerminalWindows();
-                // Request fullscreen when terminals start (stage 4)
-                requestFullscreenIfNeeded();
+                // Set flag to request fullscreen on next user interaction
+                pendingFullscreen = true;
             }
             else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 
@@ -826,12 +826,21 @@
             // Attach securely to pure raw event listeners
             userInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !isTakeover) {
+                    // If fullscreen pending, request now
+                    if (pendingFullscreen) {
+                        requestFullscreenIfNeeded();
+                        pendingFullscreen = false;
+                    }
                     sendUserMessage();
                 }
             });
 
             sendBtn.addEventListener('click', () => {
                 if (!isTakeover) {
+                    if (pendingFullscreen) {
+                        requestFullscreenIfNeeded();
+                        pendingFullscreen = false;
+                    }
                     sendUserMessage();
                 }
             });
