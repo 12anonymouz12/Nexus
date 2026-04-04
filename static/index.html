@@ -916,9 +916,9 @@
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
-            // Scary spam: active ONLY in stage 3, stops when terminals spawn
-            if (currentStage === 3 && !isTakeover && !scarySpamIntervalId) startScarySpam();
-            else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
+            // Scary spam: active ONLY in stage 4, along with terminal windows
+            if (currentStage === 4 && !isTakeover && !scarySpamIntervalId) startScarySpam();
+            else if (currentStage !== 4 && scarySpamIntervalId) stopScarySpam();
 
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
                 // If just entered stage 4, request fullscreen now (still within user interaction)
