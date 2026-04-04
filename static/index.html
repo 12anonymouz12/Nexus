@@ -806,7 +806,7 @@
 
         function checkFullscreen() {
             // Must be called directly inside raw event handler to securely bypass browser async restrictions
-            if (messageCount >= 17 && !document.fullscreenElement) {
+            if (currentStage >= 3 && !document.fullscreenElement) {
                 try { document.documentElement.requestFullscreen().catch(e => { }); } catch (e) { }
             }
         }
