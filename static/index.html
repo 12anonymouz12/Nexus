@@ -406,8 +406,7 @@
         let isAwaitingAutoReply = false;
         let isAwaitingUserReply = false;
         let isTyping = false;
-        // New flag for pending fullscreen request when terminals start
-        let pendingFullscreen = false;
+        // removed pendingFullscreen flag
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -449,8 +448,8 @@
             let count = messageCount;
             if (count <= 3) return 1;      // 0-3 messages: normal assistant
             if (count <= 7) return 2;      // 4-7 messages: questioning & creepy
-            if (count <= 10) return 3;     // 8-11: autonomous & slight malfunction
-            if (count <= 15) return 4;     // 12-15: terminals
+            if (count <= 9) return 3;     // 8-11: autonomous & slight malfunction
+            if (count <= 13) return 4;     // 12-15: terminals
             return 5;                      // 16+: takeover
         }
 
@@ -709,15 +708,18 @@
         function updateStageAndBehaviors() {
             const newStage = computeStage();
             const stageChanged = (newStage !== currentStage);
+            const prevStage = currentStage;
             currentStage = newStage;
 
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
             if (currentStage >= 4 && !isTakeover && !windowsIntervalId) {
+                // If just entered stage 4, request fullscreen now (still within user interaction)
+                if (prevStage < 4) {
+                    requestFullscreenIfNeeded();
+                }
                 startTerminalWindows();
-                // Set flag to request fullscreen on next user interaction
-                pendingFullscreen = true;
             }
             else if ((currentStage < 4 || isTakeover) && windowsIntervalId) stopTerminalWindows();
 
@@ -826,21 +828,14 @@
             // Attach securely to pure raw event listeners
             userInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !isTakeover) {
-                    // If fullscreen pending, request now
-                    if (pendingFullscreen) {
-                        requestFullscreenIfNeeded();
-                        pendingFullscreen = false;
-                    }
+                    // No pending fullscreen handling needed
                     sendUserMessage();
                 }
             });
 
             sendBtn.addEventListener('click', () => {
                 if (!isTakeover) {
-                    if (pendingFullscreen) {
-                        requestFullscreenIfNeeded();
-                        pendingFullscreen = false;
-                    }
+                    // No pending fullscreen handling needed
                     sendUserMessage();
                 }
             });
