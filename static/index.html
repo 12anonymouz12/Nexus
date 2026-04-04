@@ -633,7 +633,7 @@
             if (count <= 3) return 1;      // 0-3 messages: normal assistant
             if (count <= 6) return 2;      // 4-7 messages: questioning & creepy
             if (count <= 8) return 3;     // 8-11: autonomous & slight malfunction
-            if (count <= 13) return 4;     // 12-15: terminals
+            if (count <= 14) return 4;     // 12-15: terminals
             return 5;                      // 16+: takeover
         }
 
@@ -923,10 +923,10 @@
                 // Phase 4 (Terminals) triggers automatically 3 seconds after spam starts
                 setTimeout(() => {
                     if (currentStage === 3 && !isTakeover) {
-                        messageCount = 14; 
+                        messageCount = 14;
                         updateStageAndBehaviors();
                     }
-                }, 3000);
+                }, 5000);
             }
             else if (currentStage !== 3 && scarySpamIntervalId) stopScarySpam();
 
@@ -957,7 +957,7 @@
             if (takeoverTimeoutId) return;
             takeoverTimeoutId = setTimeout(() => {
                 if (!isTakeover) executeTakeover();
-            }, 10000); // execute takeover after 10s
+            }, 12000); // execute takeover after 10s
         }
 
         const flickerOverlay = document.getElementById('flickerOverlay');
