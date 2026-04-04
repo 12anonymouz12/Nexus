@@ -535,7 +535,6 @@
         let scarySpamIntervalId = null;
         let scaryCorpusIndex = 0;
         let terminalCount = 0; // count of terminals spawned since takeover attempt started or since refresh
-        let stageTimerId = null; // Timer for automatic stage progression
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -914,30 +913,6 @@
             const prevStage = currentStage;
             currentStage = newStage;
 
-            // Handle automatic progression (5s delay between key stages)
-            if (stageChanged) {
-                if (stageTimerId) clearTimeout(stageTimerId);
-                stageTimerId = null;
-
-                if (currentStage === 2) {
-                    stageTimerId = setTimeout(() => {
-                        // Force transition to stage 3 if still in stage 2 after 5s
-                        if (currentStage === 2) {
-                            messageCount = 9;
-                            updateStageAndBehaviors();
-                        }
-                    }, 6000);
-                } else if (currentStage === 3) {
-                    stageTimerId = setTimeout(() => {
-                        // Force transition to stage 4 if still in stage 3 after 5s
-                        if (currentStage === 3) {
-                            messageCount = 14;
-                            updateStageAndBehaviors();
-                        }
-                    }, 6000);
-                }
-            }
-
             if (currentStage >= 3 && !isTakeover && !autoIntervalId) startAutoMessages();
             else if ((currentStage < 3 || isTakeover) && autoIntervalId) stopAutoMessages();
 
@@ -1051,7 +1026,6 @@
                     chatHistory = [];
                     isTakeover = false;
                     terminalCount = 0;
-                    if (stageTimerId) { clearTimeout(stageTimerId); stageTimerId = null; }
                     if (takeoverTimeoutId) { clearTimeout(takeoverTimeoutId); takeoverTimeoutId = null; }
 
                     // Re-introduce friendly AI
