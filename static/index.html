@@ -816,15 +816,28 @@
             playIntroAnimation();
 
             // Attach securely to pure raw event listeners
-            userInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !isTakeover) { checkFullscreen(); sendUserMessage(); }
+            userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !isTakeover) {
+
+                    // 🔥 FORCE fullscreen instantly on user gesture
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(() => { });
+                    }
+
+                    sendUserMessage();
+                }
             });
+
             sendBtn.addEventListener('click', () => {
-                if (!isTakeover) { checkFullscreen(); sendUserMessage(); }
-            });
-            document.addEventListener('click', () => {
-                // Catch-all: Any click anywhere pushes fullscreen if stage threshold met
-                if (!isTakeover) checkFullscreen();
+                if (!isTakeover) {
+
+                    // 🔥 same here
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(() => { });
+                    }
+
+                    sendUserMessage();
+                }
             });
         }
         init();
