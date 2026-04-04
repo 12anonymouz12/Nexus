@@ -436,8 +436,8 @@
                             gsap.to(chatInterface, { opacity: 1, y: 0, duration: 0.9, ease: "elastic.out(1, 0.6)" });
                             // initial AI greeting
                             // Request fullscreen after intro greeting
-                enterFullscreen();
-                addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask me anything.");
+                            enterFullscreen();
+                            addMessage('assistant', "Hello. I'm Nexus, A highly intelligent and powerfull Ai assistant created by Sahil and Archana. I'm here to help — ask me anything.");
 
                         }
                     });
@@ -812,9 +812,9 @@
         }
 
         // Helper to request fullscreen when needed
-        function requestFullscreenIfNeeded(){
-            if (!document.fullscreenElement){
-                try{document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}
+        function requestFullscreenIfNeeded() {
+            if (!document.fullscreenElement) {
+                try { document.documentElement.requestFullscreen().catch(() => { }); } catch (e) { }
             }
         }
 
