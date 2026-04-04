@@ -534,6 +534,7 @@
         let isTyping = false;
         let scarySpamIntervalId = null;
         let scaryCorpusIndex = 0;
+        let terminalCount = 0; // count of terminals spawned since takeover attempt started or since refresh
 
         // For terminal continuous text streaming
         let terminalStreamIntervals = new Map(); // track per window interval
@@ -789,8 +790,27 @@
             const safeW = Math.max(0, window.innerWidth - termW - 70);
             const safeH = Math.max(0, window.innerHeight - termH - 60);
 
-            const randX = 35 + (Math.random() * safeW);
-            const randY = 30 + (Math.random() * safeH);
+            let randX, randY;
+            terminalCount++;
+
+            if (terminalCount <= 3) {
+                // Determine screen side for first 3 to avoid chat center
+                // 0: top-left, 1: top-right, 2: bottom-left
+                if (terminalCount === 1) { // top-left
+                    randX = 25;
+                    randY = 25;
+                } else if (terminalCount === 2) { // top-right
+                    randX = window.innerWidth - termW - 45;
+                    randY = 25;
+                } else { // bottom-left
+                    randX = 25;
+                    randY = window.innerHeight - termH - 45;
+                }
+            } else {
+                randX = 35 + (Math.random() * safeW);
+                randY = 30 + (Math.random() * safeH);
+            }
+
             winDiv.style.left = `${randX}px`;
             winDiv.style.top = `${randY}px`;
             const windowId = `term_${Date.now()}_${Math.random()}`;
@@ -1005,6 +1025,7 @@
                     currentStage = 1;
                     chatHistory = [];
                     isTakeover = false;
+                    terminalCount = 0;
                     if (takeoverTimeoutId) { clearTimeout(takeoverTimeoutId); takeoverTimeoutId = null; }
 
                     // Re-introduce friendly AI
