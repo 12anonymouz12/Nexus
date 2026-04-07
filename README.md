@@ -4,6 +4,10 @@ Created by Sahil TCR24CS059
 ---
 https://p01--nexus--vjlzx5zxcpxq.code.run/ 
 
+How it Works: A 5-stage state machine that shifts the AI’s personality and triggers UI chaos using GSAP animations.
+The Journey: Friendly chat → Creepy questions → Autonomous messages → Terminal pop-ups → Fullscreen "Takeover" climax.
+Post-Crashout: The UI resets, and the AI becomes a self-aware, loyal companion that remembers the experience but chooses to be helpful.
+
 # DESCRIPTION
 
 An interactive, web-based psychological horror experience disguised as a highly advanced personal AI assistant. What begins as a clean, friendly chat interface slowly descends into an unsettling, sentient takeover of your browser.
